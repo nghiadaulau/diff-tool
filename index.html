@@ -6,7 +6,6 @@
     <link rel="icon" href="favicon.png" type="image/x-icon">
     <title>K.Kloud Tarus - Compare Files or Text</title>
     <style>
-        /* Reset và thiết lập chung */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -20,7 +19,7 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 20px auto;
             background-color: #fff;
             padding: 30px;
@@ -62,10 +61,6 @@
             display: block;
         }
 
-        input[type="file"] {
-            margin: 10px 0;
-        }
-
         textarea {
             width: 100%;
             height: 150px;
@@ -97,32 +92,27 @@
 
         .result-container {
             display: flex;
-            flex-direction: column;
             gap: 10px;
             margin-top: 20px;
         }
 
-        @media (min-width: 768px) {
-            .result-container {
-                flex-direction: row;
-            }
-        }
-
         .differences {
-            flex: 1;
-            background-color: #f5f5f5;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            overflow-y: auto;
-            max-height: 400px;
-            white-space: pre-wrap;
-            font-family: monospace;
-        }
+    flex: 1;
+    background-color: #f5f5f5;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    overflow-y: auto;
+    max-height: 400px;
+    white-space: pre-wrap;
+    font-family: monospace;
+
+}
 
         .line {
             display: flex;
             align-items: center;
+            padding: 5px 0;
         }
 
         .line-number {
@@ -141,8 +131,16 @@
         }
 
         .identical {
-            background-color: #ffffff;
+            background-color: #eaf4fc;
         }
+
+        .highlight {
+            font-weight: bold;
+            background-color: yellow;
+        }
+.modified {
+    background-color: #fff3cd; /* Highlight cho nội dung bị thay đổi */
+}
     </style>
 </head>
 <body>
@@ -155,13 +153,11 @@
         <div class="tab" onclick="switchTab('text')">Paste Text</div>
     </div>
 
-    <!-- Upload Files Tab -->
     <div id="file" class="tab-content active">
         <input type="file" id="file1" />
         <input type="file" id="file2" />
     </div>
 
-    <!-- Paste Text Tab -->
     <div id="text" class="tab-content">
         <textarea id="text1" placeholder="Paste first text here..."></textarea>
         <textarea id="text2" placeholder="Paste second text here..."></textarea>
@@ -179,7 +175,6 @@
     function switchTab(tabId) {
         document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-
         document.querySelector(`.tab[onclick="switchTab('${tabId}')"]`).classList.add('active');
         document.getElementById(tabId).classList.add('active');
     }
@@ -220,11 +215,6 @@
         } else {
             content1 = document.getElementById('text1').value;
             content2 = document.getElementById('text2').value;
-
-            if (!content1 || !content2) {
-                alert('Please paste both texts.');
-                return;
-            }
         }
 
         content1 = formatJSON(content1);
@@ -238,42 +228,67 @@
             const json = JSON.parse(text);
             return JSON.stringify(json, null, 2);
         } catch {
-            return text; // Return original text if not valid JSON
+            return text;
         }
     }
 
     function displayDifferences(text1, text2, div1, div2) {
-        const lines1 = text1.split('\n');
-        const lines2 = text2.split('\n');
-        const maxLength = Math.max(lines1.length, lines2.length);
+    const lines1 = text1.split('\n');
+    const lines2 = text2.split('\n');
+    const maxLength = Math.max(lines1.length, lines2.length);
 
-        for (let i = 0; i < maxLength; i++) {
-            const line1 = lines1[i] || '';
-            const line2 = lines2[i] || '';
+    for (let i = 0; i < maxLength; i++) {
+        const line1 = lines1[i] || '';
+        const line2 = lines2[i] || '';
 
-            const line1Elem = createLineElement(i + 1, line1, line1 === line2 ? 'identical' : 'removed');
-            const line2Elem = createLineElement(i + 1, line2, line1 === line2 ? 'identical' : 'added');
+        const [highlightedLine1, highlightedLine2] = highlightDifferences(line1, line2);
 
-            div1.appendChild(line1Elem);
-            div2.appendChild(line2Elem);
+        const line1Elem = createLineElement(i + 1, highlightedLine1, line1 === line2 ? 'identical' : 'removed');
+        const line2Elem = createLineElement(i + 1, highlightedLine2, line1 === line2 ? 'identical' : 'added');
+
+        div1.appendChild(line1Elem);
+        div2.appendChild(line2Elem);
+    }
+}
+
+function highlightDifferences(line1, line2) {
+    if (line1 === line2) return [line1, line2];
+
+    let highlighted1 = '';
+    let highlighted2 = '';
+
+    const maxLength = Math.max(line1.length, line2.length);
+    for (let i = 0; i < maxLength; i++) {
+        const char1 = line1[i] || '';
+        const char2 = line2[i] || '';
+
+        if (char1 !== char2) {
+            highlighted1 += `<span class="modified">${char1}</span>`;
+            highlighted2 += `<span class="modified">${char2}</span>`;
+        } else {
+            highlighted1 += char1;
+            highlighted2 += char2;
         }
     }
+    return [highlighted1, highlighted2];
+}
 
-    function createLineElement(lineNumber, content, className) {
-        const lineElem = document.createElement('div');
-        lineElem.className = `line ${className}`;
+function createLineElement(lineNumber, content, className) {
+    const lineElem = document.createElement('div');
+    lineElem.className = `line ${className}`;
 
-        const numberElem = document.createElement('div');
-        numberElem.className = 'line-number';
-        numberElem.textContent = lineNumber;
+    const numberElem = document.createElement('div');
+    numberElem.className = 'line-number';
+    numberElem.textContent = lineNumber;
 
-        const contentElem = document.createElement('div');
-        contentElem.textContent = content;
+    const contentElem = document.createElement('div');
+    contentElem.innerHTML = content;  // Sử dụng innerHTML để hiển thị thẻ <span>
 
-        lineElem.appendChild(numberElem);
-        lineElem.appendChild(contentElem);
-        return lineElem;
-    }
+    lineElem.appendChild(numberElem);
+    lineElem.appendChild(contentElem);
+    return lineElem;
+}
+
 </script>
 
 </body>
